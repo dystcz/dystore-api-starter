@@ -1,0 +1,171 @@
+services:
+  api:
+    build:
+      dockerfile: .docker/api/Dockerfile
+      target: base-dev
+    command: php artisan octane:start --host=0.0.0.0 --max-requests=1 --caddyfile=./Caddyfile --port=8000 --watch
+    restart: unless-stopped
+    environment:
+      XDEBUG_MODE: ${XDEBUG_MODE:-off}
+    volumes:
+      - ./api:/app
+      - ./.data/php/packages:/app/packages
+      - /tmp/xdebug:/tmp/xdebug
+    hostname: api
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - ${API_PORT:-8000}:8000
+      - ${VITE_PORT:-5173}:${VITE_PORT:-5173}
+    depends_on:
+      mariadb:
+        condition: service_started
+      redis:
+        condition: service_started
+      mailpit:
+        condition: service_started
+      install-api-packages:
+        condition: service_completed_successfully
+    networks:
+      - api
+    tty: true
+
+  install-api-packages:
+    build:
+      dockerfile: .docker/api/Dockerfile
+      target: base-dev
+    command: composer install && php artisan cache:clear
+    restart: no
+    volumes:
+      - ./api:/app
+      - ./.data/php/packages:/app/packages
+    depends_on:
+      redis:
+        condition: service_started
+    networks:
+      - api
+
+  # schedule:
+  #   build:
+  #     dockerfile: .docker/api/Dockerfile
+  #     target: base-dev
+  #   command: php artisan schedule:work
+  #   restart: unless-stopped
+  #   environment:
+  #     APP_ENV: local
+  #   volumes:
+  #     - ./api:/app
+  #   depends_on:
+  #     - mariadb
+  #     - redis
+  #     - mailpit
+  #   networks:
+  #     - api
+
+  # queue:
+  #   build:
+  #     dockerfile: .docker/api/Dockerfile
+  #     target: base-dev
+  #   command: php artisan queue:work --tries=3
+  #   restart: unless-stopped
+  #   environment:
+  #     APP_ENV: local
+  #   volumes:
+  #     - ./api:/app
+  #   depends_on:
+  #     - mariadb
+  #     - redis
+  #     - mailpit
+  #   networks:
+  #     - api
+
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATA_FILE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - mailpit:/data
+    ports:
+      - ${FORWARD_MAILPIT_PORT:-1025}:1025
+      - ${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025
+    networks:
+      - api
+
+  client:
+    build:
+      dockerfile: .docker/client/Dockerfile
+    command: nr dev
+    environment:
+      HOST: 0.0.0.0
+    volumes:
+      - ./client:/app
+      - ./.data/js/packages:/app/packages
+    working_dir: /app
+    hostname: client
+    ports:
+      - "${CLIENT_PORT:-3000}:3000" # Nuxt port
+      - "${CLIENT_VITE_PORT:-24678}:24678" # Vite port
+    depends_on:
+      install-client-packages:
+        condition: service_completed_successfully
+    networks:
+      - client
+      - api
+
+  install-client-packages:
+    build:
+      dockerfile: .docker/client/Dockerfile
+    command: ni
+    restart: no
+    volumes:
+      - ./client:/app
+      - ./.data/js/packages:/app/packages
+
+  mariadb:
+    build:
+      dockerfile: .docker/mariadb/Dockerfile
+    restart: always
+    ports:
+      - ${FORWARD_DB_PORT:-3306}:3306
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_ROOT_HOST: "%"
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mariadb:/var/lib/mysql
+      - ./.data/mariadb/dumps:/var/mariadb/dumps
+      - ./.docker/mariadb/initdb.d:/docker-entrypoint-initdb.d
+    networks:
+      - api
+
+  redis:
+    image: redis:7.2.5-alpine
+    volumes:
+      - redis:/data
+    ports:
+      - ${FORWARD_REDIS_PORT:-6379}:6379
+    networks:
+      - api
+      - client
+
+volumes:
+  mariadb:
+    driver: local
+
+  redis:
+    driver: local
+
+  mailpit:
+    driver: local
+
+networks:
+  api:
+    driver: bridge
+
+  client:
+    driver: bridge
