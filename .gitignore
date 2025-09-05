@@ -1,0 +1,10 @@
+.env
+.idea
+.vscode
+.phpactor.json
+.vectorcode
+chroma.log
+nohup.out
+.DS_Store
+.lando.yml
+nohup.out

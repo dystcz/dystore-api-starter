@@ -1,0 +1,40 @@
+# Common
+**/.idea
+**/.vscode
+**/.gitignore
+**/.gitattributes
+**/.dockerignore
+**/.editorconfig
+**/.prettierrc
+**/.rgignore
+**/.env.*
+**/README.md
+
+# Root
+/.data
+.git
+Makefile
+compose.*.yaml
+*.sh
+
+**/Dockerfile
+
+# API
+api/insomnia
+api/public/storage
+api/bootstrap/cache/*
+api/storage/app/*
+api/storage/framework/views/*
+api/storage/logs/*
+api/tests
+api/tinkerwell
+api/vendor
+api/node_modules
+
+# Client
+client/.nuxt/
+client/.output/
+client/node_modules
+client/tests
+client/README.md
+
