@@ -3,7 +3,7 @@ services:
     build:
       dockerfile: .docker/api/Dockerfile
       target: base-dev
-    command: php artisan octane:start --host=0.0.0.0 --max-requests=1 --caddyfile=./Caddyfile --port=8000 --watch
+    command: php artisan octane:start --host=0.0.0.0 --max-requests=1 --port=8000 --watch
     restart: unless-stopped
     environment:
       XDEBUG_MODE: ${XDEBUG_MODE:-off}
@@ -94,35 +94,35 @@ services:
     networks:
       - api
 
-  client:
-    build:
-      dockerfile: .docker/client/Dockerfile
-    command: nr dev
-    environment:
-      HOST: 0.0.0.0
-    volumes:
-      - ./client:/app
-      - ./.data/js/packages:/app/packages
-    working_dir: /app
-    hostname: client
-    ports:
-      - "${CLIENT_PORT:-3000}:3000" # Nuxt port
-      - "${CLIENT_VITE_PORT:-24678}:24678" # Vite port
-    depends_on:
-      install-client-packages:
-        condition: service_completed_successfully
-    networks:
-      - client
-      - api
-
-  install-client-packages:
-    build:
-      dockerfile: .docker/client/Dockerfile
-    command: ni
-    restart: no
-    volumes:
-      - ./client:/app
-      - ./.data/js/packages:/app/packages
+  # client:
+  #   build:
+  #     dockerfile: .docker/client/Dockerfile
+  #   command: nr dev
+  #   environment:
+  #     HOST: 0.0.0.0
+  #   volumes:
+  #     - ./client:/app
+  #     - ./.data/js/packages:/app/packages
+  #   working_dir: /app
+  #   hostname: client
+  #   ports:
+  #     - "${CLIENT_PORT:-3000}:3000" # Nuxt port
+  #     - "${CLIENT_VITE_PORT:-24678}:24678" # Vite port
+  #   depends_on:
+  #     install-client-packages:
+  #       condition: service_completed_successfully
+  #   networks:
+  #     - client
+  #     - api
+  #
+  # install-client-packages:
+  #   build:
+  #     dockerfile: .docker/client/Dockerfile
+  #   command: ni
+  #   restart: no
+  #   volumes:
+  #     - ./client:/app
+  #     - ./.data/js/packages:/app/packages
 
   mariadb:
     build:
